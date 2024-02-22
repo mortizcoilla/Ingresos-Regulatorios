@@ -2,8 +2,8 @@
 # Importaciones desde subdirectorios
 from Peajes.procesamiento_datos.procesador import extract_dataframes, create_dataframe, procesar_datos_historicos, unir_dataframes
 from Peajes.utilidades.estadisticas import calcular_estadisticas
-
 from Peajes.utilidades.email_sender import evaluar_pago_total, seleccionar_y_enviar_email
+from Peajes.web_scraping.scraper import open_website
 
 # Importar configuraciones
 from Peajes.utilidades.config import (
@@ -12,8 +12,13 @@ from Peajes.utilidades.config import (
     EXCEL_FILE_NAME,
     BBDD_PATH,
     DESTINATARIOS,
-    ASUNTO_BASE
+    DESTINATARIOS_CC,
+    ASUNTO_BASE,
+    SCRAPER_URL,
+    DRIVER_PATH,
+    DOWNLOAD_PATH
 )
+
 
 def main():
     """
@@ -42,7 +47,14 @@ def main():
         asunto = ASUNTO_BASE + " Resultados del Mes"
 
         # Seleccionar y enviar el correo electrónico según la elección del usuario
-        seleccionar_y_enviar_email(df_preliminar, df_historico, estadisticas, DESTINATARIOS, ASUNTO_BASE, minimo, maximo)
+        seleccionar_y_enviar_email(df_preliminar,
+                                   df_historico,
+                                   estadisticas,
+                                   DESTINATARIOS,
+                                   DESTINATARIOS_CC,
+                                   ASUNTO_BASE,
+                                   minimo,
+                                   maximo)
 
     except Exception as e:
         print(f"Error en el procesamiento de datos: {e}")
