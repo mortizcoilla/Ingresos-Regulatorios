@@ -31,7 +31,8 @@ def cdp(codigo_fecha):
     titulo_informe = f"Reporte Disconformidades PPagos {mes_texto}{str(año)[2:]}"
 
     try:
-        url_base = f"https://www.coordinador.cl/mercados/documentos/seguimiento-de-la-cadena-de-pago/reporte-disconformidades-sec/{año}-informe-mensual-sec/"
+        url_base = (f"https://www.coordinador.cl/mercados/documentos/seguimiento-de-la-cadena-de-pago/reporte"
+                    f"-disconformidades-sec/{año}-informe-mensual-sec/")
         driver.get(url_base)
         print(f"Navegando a {url_base}")
 
