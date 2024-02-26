@@ -1,8 +1,15 @@
+# Análisis de Cadena de Pagos y Seguimiento
 import pandas as pd
 
 def leer_CDP(fecha):
+    """
     nombre_archivo = f"Reporte Disconformidades PPagos I {fecha}.xlsx"
     ruta_archivo = f"C:\\workspace\\BBDD\\CadenaDePagos\\{nombre_archivo}"
+    """
+
+    nombre_archivo = f"Reporte Disconformidades PPagos I {fecha}.xlsx"
+    ruta_archivo = f"C:\\Users\\QV6522\\Workspace\\IngresosRegulados\\Proyectos\\BBDD\\{nombre_archivo}"  
+    
     
     nombre_hoja = "MCP"
     try:
@@ -91,7 +98,6 @@ def generar_resumen(df, rut_focal):
     return resumen
 
 # ------------------------------------------------------------------------------------------------------------
-"""
 fecha = '202310'
 df = leer_CDP(fecha)
 
@@ -106,23 +112,4 @@ if df is not None:
         print(f"{key}: {value}")
 else:
     print("El DataFrame no pudo ser cargado. Por favor, verifica la ruta y el nombre del archivo.")
-"""
 # -----------------------------------------------------------------------------------------------------------
-import pandas as pd
-from pandas_profiling import ProfileReport
-
-# Crear un DataFrame simple como ejemplo
-data = {
-    'Nombre': ['Ana', 'Luis', 'Carlos', 'Teresa'],
-    'Edad': [32, 45, 23, 36],
-    'Ciudad': ['Madrid', 'Barcelona', 'Madrid', 'Valencia'],
-    'Ingresos': [3000, 4000, 3500, 2800]
-}
-
-df = pd.DataFrame(data)
-
-# Generar el reporte de Pandas Profiling
-profile = ProfileReport(df, title='Reporte de Pandas Profiling', explorative=True)
-
-# Guardar el reporte como un archivo HTML
-profile.to_file("reporte_ejemplo.html")

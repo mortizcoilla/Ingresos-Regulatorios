@@ -1,3 +1,5 @@
+# Proyecto para evaluación del VATT 
+
 from datetime import datetime
 
 import pandas as pd
@@ -24,7 +26,7 @@ def ipc(year):
         table_data = []
         for row in rows:
             cells = row.find_elements(By.TAG_NAME, "td")
-            row_data = [cell.text for cell in cells if cell.text]  # Se recogen los datos de cada celda
+            row_data = [cell.text for cell in cells if cell.text]
             if row_data:
                 table_data.append(row_data)
 
@@ -183,7 +185,8 @@ def macroeconomicos(year):
 
 def itd_vatt(ruta_itd, fecha):
     df_anexo1 = pd.read_excel(ruta_itd, sheet_name='TablaAnexo1', engine='openpyxl')
-    df_anexo1_filtrado = df_anexo1.loc[df_anexo1['Empresa Propietaria'].isin(['Agricola Ponce'])]
+    df_anexo1_filtrado = df_anexo1.loc[df_anexo1['Empresa Propietaria'].isin(['E-CL'])]
+    # ASUNTO DE LAS OBRAS DE AMPLIACION
     df_indexacion = pd.read_excel(ruta_itd, sheet_name='Indexacion', engine='openpyxl')
     df_itd = pd.merge(df_anexo1_filtrado, df_indexacion, on=['Sistema', 'Zona', 'Tipo Tramo (*)'], how='left')
 
@@ -202,7 +205,6 @@ def itd_vatt(ruta_itd, fecha):
         return df_itd
 
     IPC_0 = 97.89
-    IPC_P = 249.841
     CPI_0 = 246.663
     D_0 = 629.55
     Ta_0 = 0.06
@@ -210,11 +212,20 @@ def itd_vatt(ruta_itd, fecha):
     Ta_k = 0.06
     t_k = 0.27
 
+    """
     df_itd['IPC_k'] = float(df_macro_filtrado.iloc[0]['IPC'])
     df_itd['IPC_0'] = IPC_0
 
     df_itd['D_0'] = D_0
     df_itd['D_k'] = float(df_macro_filtrado.iloc[0]['Dólar'])
+
+    fecha_exacta = datetime.strptime(fecha, '%Y%m')
+    df_macro_exacto = df_macro[df_macro['Periodo'] == pd.to_datetime(fecha_exacta)]
+    if not df_macro_exacto.empty:
+        D_P = float(df_macro_exacto.iloc[0]['Dólar'])
+    else:
+        D_P = None
+    df_itd['D_P'] = D_P
 
     df_itd['CPI_k'] = float(df_macro_filtrado.iloc[0]['CPI'])
     df_itd['CPI_0'] = CPI_0
@@ -230,28 +241,84 @@ def itd_vatt(ruta_itd, fecha):
     df_itd['R_CPI'] = float(df_macro_filtrado.iloc[0]['CPI']) / CPI_0
     df_itd['R_Ta'] = (1+Ta_k)/(1+Ta_0)
     df_itd['R_t'] = (t_k/t_0)*((1-t_0)/(1-t_k))
-
-    df_itd['AVI'] = df_itd['AVI US$'] * (df_itd['alfa'] * (float(df_macro_filtrado.iloc[0]['IPC']) / IPC_0) * (
+    """
+    
+    fecha_exacta = datetime.strptime(fecha, '%Y%m')
+    df_macro_exacto = df_macro[df_macro['Periodo'] == pd.to_datetime(fecha_exacta)]
+    if not df_macro_exacto.empty:
+        D_P = float(df_macro_exacto.iloc[0]['Dólar'])
+    else:
+        D_P = None
+    
+    df_itd['AVI USD'] = df_itd['AVI US$'] * (df_itd['alfa'] * (float(df_macro_filtrado.iloc[0]['IPC']) / IPC_0) * (
                 D_0 / float(df_macro_filtrado.iloc[0]['Dólar'])) + df_itd['beta'] * (
                                               float(df_macro_filtrado.iloc[0]['CPI']) / CPI_0) * (
-                                              (1 + 0.06) / (1 + 0.06)))
+                                              (1 + Ta_k) / (1 + Ta_0)))
 
-    df_itd['COMA'] = df_itd['COMA US$'] * (float(df_macro_filtrado.iloc[0]['IPC']) / IPC_0) * (
+    df_itd['COMA USD'] = df_itd['COMA US$'] * (float(df_macro_filtrado.iloc[0]['IPC']) / IPC_0) * (
                 D_0 / float(df_macro_filtrado.iloc[0]['Dólar']))
 
-    df_itd['AEIR'] = df_itd['AEIR US$'] * (df_itd['gama'] * (float(df_macro_filtrado.iloc[0]['IPC']) / IPC_0) * (
+    df_itd['AEIR USD'] = df_itd['AEIR US$'] * (df_itd['gama'] * (float(df_macro_filtrado.iloc[0]['IPC']) / IPC_0) * (
                 D_0 / float(df_macro_filtrado.iloc[0]['Dólar'])) + df_itd['delta'] * (
                                                float(df_macro_filtrado.iloc[0]['CPI']) / CPI_0) * (
                                                (1 + Ta_k) / (1 + Ta_0))) * ((t_k / t_0) * ((1 - t_0) / (1 - t_k)))
 
-    df_itd['VATT'] = df_itd['AVI'] + df_itd['COMA'] + df_itd['AEIR']
+    df_itd['VATT USD'] = df_itd['AVI USD'] + df_itd['COMA USD'] + df_itd['AEIR USD']
+    
+    df_itd['AVI CLP'] = D_P * df_itd['AVI US$'] * (df_itd['alfa'] * (float(df_macro_filtrado.iloc[0]['IPC']) / IPC_0) * (
+                D_0 / float(df_macro_filtrado.iloc[0]['Dólar'])) + df_itd['beta'] * (
+                                              float(df_macro_filtrado.iloc[0]['CPI']) / CPI_0) * (
+                                              (1 + Ta_k) / (1 + Ta_0)))
 
+    df_itd['COMA CLP'] = D_P * df_itd['COMA US$'] * (float(df_macro_filtrado.iloc[0]['IPC']) / IPC_0) * (
+                D_0 / float(df_macro_filtrado.iloc[0]['Dólar']))
+
+    df_itd['AEIR CLP'] = D_P * df_itd['AEIR US$'] * (df_itd['gama'] * (float(df_macro_filtrado.iloc[0]['IPC']) / IPC_0) * (
+                D_0 / float(df_macro_filtrado.iloc[0]['Dólar'])) + df_itd['delta'] * (
+                                               float(df_macro_filtrado.iloc[0]['CPI']) / CPI_0) * (
+                                               (1 + Ta_k) / (1 + Ta_0))) * ((t_k / t_0) * ((1 - t_0) / (1 - t_k)))
+
+    df_itd['VATT CLP'] = df_itd['AVI CLP'] + df_itd['COMA CLP'] + df_itd['AEIR CLP']
+    
     return df_itd
 
+def zonal_y_dedicado():
+    ruta_archivo = "C:\\Users\\QV6522\\Workspace\\IngresosRegulados\\Proyectos\\BBDD\\Saldos Transmisión Zonal y Dedicado D7T 2311-def.xlsx"
+    
+    # Leer Prorrata_Zonal
+    hoja_zonal = 'Prorrata_Zonal'
+    df_zonal = pd.read_excel(ruta_archivo, sheet_name=hoja_zonal, usecols='B:AA', skiprows=4)
+    df_zonal_filtrado = df_zonal[df_zonal['PROPIETARIO'] == 'ENGIE']
+    df_zonal_filtrado['MES'] = pd.to_datetime(df_zonal_filtrado['MES'])
+    df_zonal_filtrado = df_zonal_filtrado[df_zonal_filtrado['MES'] == '2023-11-01']
+    df_zonal_filtrado = df_zonal_filtrado.sort_values(by='MES', ascending=False)
+    
+    # Leer Prorrata_Dedicado
+    hoja_dedicado = 'Prorrata_Dedicado'
+    df_dedicado = pd.read_excel(ruta_archivo, sheet_name=hoja_dedicado, usecols='B:U', skiprows=5)
+    df_dedicado_filtrado = df_dedicado[df_dedicado['PROPIETARIO'] == 'ENGIE']
+    df_dedicado_filtrado['MES'] = pd.to_datetime(df_dedicado_filtrado['MES'])
+    df_dedicado_filtrado = df_dedicado_filtrado[df_dedicado_filtrado['MES'] == '2023-11-01']
+    df_dedicado_filtrado = df_dedicado_filtrado.sort_values(by='MES', ascending=False)
+    
+    return df_zonal_filtrado, df_dedicado_filtrado
 
-año_de_interés = 2013
-df_indices_macroeconomicos = macroeconomicos(año_de_interés)
-print(df_indices_macroeconomicos)
-df_indices_macroeconomicos.to_excel(r"C:\Users\QV6522\Workspace\indices_macro.xlsx", index=False)
-
-
+# --------------------------------------------------------------------------------------------------------------------------------------------------
+# Llamada a la función y asignación de los resultados
+df_zonal, df_dedicado = zonal_y_dedicado()
+print(df_zonal.head())
+print(df_dedicado.head())
+# --------------------------------------------------------------------------------------------------------------------------------------------------
+# año_de_interés = 2013
+# df_indices_macroeconomicos = macroeconomicos(año_de_interés)
+# print(df_indices_macroeconomicos)
+# df_indices_macroeconomicos.to_excel(r"C:\Users\QV6522\Workspace\indices_macro.xlsx", index=False)
+# --------------------------------------------------------------------------------------------------------------------------------------------------
+# ruta_itd = r'C:/Users/QV6522/Workspace/IngresosRegulados/Proyectos/BBDD/Resultados_ITD_rec.xlsx'
+# fecha = '202311'
+# df_resultante = itd_vatt(ruta_itd, fecha)
+# print(df_resultante)
+# ruta_exportacion = r'C:\Users\QV6522\Workspace\resultados_itd_vatt.xlsx'
+# df_resultante.to_excel(ruta_exportacion, index=False, engine='openpyxl')
+# print(f"DataFrame exportado con éxito a {ruta_exportacion}")
+# --------------------------------------------------------------------------------------------------------------------------------------------------
