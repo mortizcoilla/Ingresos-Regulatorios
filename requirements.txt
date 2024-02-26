@@ -1,0 +1,9 @@
+selenium
+pandas
+pyautogui
+matplotlib
+seaborn
+sqlalchemy
+statsmodels
+scikit-learn
+pypiwin32
