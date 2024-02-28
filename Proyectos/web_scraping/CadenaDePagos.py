@@ -1,14 +1,17 @@
 # Análisis de Cadena de Pagos y Seguimiento
 import pandas as pd
-import plotly.express as px
+import plotly.graph_objects as go
+from plotly.offline import plot
+from datetime import datetime
+
+import dash
+from dash import dcc, html
+from dash import dash_table
+
+
 
 
 def leer_CDP(fecha):
-    """
-    nombre_archivo = f"Reporte Disconformidades PPagos I {fecha}.xlsx"
-    ruta_archivo = f"C:\\workspace\\BBDD\\CadenaDePagos\\{nombre_archivo}"
-    """
-
     nombre_archivo = f"Reporte Disconformidades PPagos I {fecha}.xlsx"
     ruta_archivo = f"C:\\Users\\QV6522\\Workspace\\IngresosRegulados\\Proyectos\\BBDD\\{nombre_archivo}"
 
@@ -85,68 +88,60 @@ def empresas(df):
     return empresas_df
 
 
-def generar_resumen(df, rut_focal):
-    df_filtrado = df[(df['RA'] == rut_focal) | (df['RD'] == rut_focal)].copy()
-    df_filtrado['MBIP_limpio'] = df_filtrado['MBIP'].replace('[\$,]', '', regex=True).astype(float)
+def calcular_porcentaje_acumulado_deuda(df_empresas):
+    df_filtrado = df_empresas[df_empresas['Deuda'] > 0].copy()
+    df_filtrado.sort_values(by='Deuda', ascending=False, inplace=True)
+    total_deuda = df_filtrado['Deuda'].sum()
 
-    resumen = {
-        'Casos como Acreedor': df_filtrado[df_filtrado['RA'] == rut_focal].shape[0],
-        'Casos como Deudor': df_filtrado[df_filtrado['RD'] == rut_focal].shape[0],
-        'Monto Total como Acreedor': df_filtrado[df_filtrado['RA'] == rut_focal]['MBIP_limpio'].sum(),
-        'Monto Total como Deudor': df_filtrado[df_filtrado['RD'] == rut_focal]['MBIP_limpio'].sum(),
-        'Tipos de Disconformidad como Acreedor': df_filtrado[df_filtrado['RA'] == rut_focal][
-            'TDC'].value_counts().to_dict(),
-        'Tipos de Disconformidad como Deudor': df_filtrado[df_filtrado['RD'] == rut_focal][
-            'TDC'].value_counts().to_dict(),
-        'Contrapartes como Acreedor': df_filtrado[df_filtrado['RA'] == rut_focal]['RD'].value_counts().to_dict(),
-        'Contrapartes como Deudor': df_filtrado[df_filtrado['RD'] == rut_focal]['RA'].value_counts().to_dict(),
-    }
+    df_filtrado['Deuda (M)'] = (df_filtrado['Deuda'] / 1000000).round(1)
+    df_filtrado['Porcentaje Acumulado'] = ((df_filtrado['Deuda'].cumsum() / total_deuda) * 100).round(1)
 
-    return resumen
+    df_filtrado['Porcentaje del Total (%)'] = ((df_filtrado['Deuda'] / total_deuda) * 100).round(1)
+
+    def asignar_categoria(porcentaje):
+        if porcentaje < 80:
+            return 'A'
+        elif 80 <= porcentaje < 95:
+            return 'B'
+        else:
+            return 'C'
+
+    df_filtrado['Categoria'] = df_filtrado['Porcentaje Acumulado'].apply(asignar_categoria)
+    df_filtrado['Cantidad Disconformidades'] = df_empresas['Q_Deuda']
+    df_resultado = df_filtrado[['Categoria', 'RUT', 'RS', 'Deuda (M)', 'Cantidad Disconformidades', 'Porcentaje del Total (%)', 'Porcentaje Acumulado']]
+    df_resultado.columns = ['Categoria', 'RUT', 'Razon Social', 'Total Deuda (M)', 'Cantidad Disconformidades', 'Porcentaje del Total (%)', 'Porcentaje Acumulado (%)']
+
+    return df_resultado
 
 
-# ------------------------------------------------------------------------------------------------------------
-"""
+# --------------------
+
+app = dash.Dash(__name__)
+
 fecha = '202310'
-df = leer_CDP(fecha)
-
-if df is not None:
-    df_transformado = transformaciones_cdp(df)
-    df_transformado['MBIP_limpio'] = df_transformado['MBIP'].replace('[\$,]', '', regex=True).astype(float)
-    rut_focal = '88.006.900-4'
-    resumen_para_rut_focal = generar_resumen(df_transformado, rut_focal)
-
-    print("Resumen para el RUT:", rut_focal)
-    for key, value in resumen_para_rut_focal.items():
-        print(f"{key}: {value}")
+df_original = leer_CDP(fecha)
+if df_original is not None:
+    df_transformado = transformaciones_cdp(df_original)
+    df_empresas = empresas(df_transformado)
+    df_resultado = calcular_porcentaje_acumulado_deuda(df_empresas)
 else:
-    print("El DataFrame no pudo ser cargado. Por favor, verifica la ruta y el nombre del archivo.")
-"""
-# -----------------------------------------------------------------------------------------------------------
-# fecha = '202310'
-# df_original = leer_CDP(fecha)
+    print("No se pudo cargar el DataFrame original.")
+    df_resultado = pd.DataFrame()
 
-# if df_original is not None:
-#    df_transformado = transformaciones_cdp(df_original)
-#    df_empresas = empresas(df_transformado)
+app.layout = html.Div([
+    html.H1('Detalle de Deuda por Empresa'),
+    dash_table.DataTable(
+        id='tabla_deuda',
+        columns=[{"name": i, "id": i} for i in df_resultado.columns],
+        data=df_resultado.to_dict('records'),
+        style_table={'overflowX': 'scroll'},
+        page_size=10,
+        style_cell={'textAlign': 'left'},
+        filter_action="native",
+        sort_action="native",
+        sort_mode="multi",
+    )
+])
 
-#    ruta_salida = r"C:\Users\QV6522\Workspace\BBDD\01_Cadena De Pagos\Resumen_Empresas.xlsx"
-
-#    df_empresas.to_excel(ruta_salida, index=False)
-#    print(f"El archivo Excel ha sido exportado con éxito a {ruta_salida}")
-# else:
-#    print("No se pudo cargar el DataFrame original.")
-# -----------------------------------------------------------------------------------------------------------
-# fecha = "202310"
-# df_original = leer_CDP(fecha)
-# df_transformado = transformaciones_cdp(df_original)
-# ruta_exportacion_transformaciones = "C:\\Users\\QV6522\\Workspace\\BBDD\\01_Cadena De Pagos\\datos_transformados.xlsx"
-# df_transformado.to_excel(ruta_exportacion_transformaciones, index=False)
-# -----------------------------------------------------------------------------------------------------------
-
-df = leer_CDP("202310")
-df_transformado = transformaciones_cdp(df)
-deuda_total = df_transformado['MBIP'].sum()
-deuda_total_formateada = f"${deuda_total:,}"
-
-print(f"La deuda total del sistema es de {deuda_total_formateada} Millones de CLP")
+if __name__ == '__main__':
+    app.run_server(debug=True)
