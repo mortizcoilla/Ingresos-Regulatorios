@@ -4,16 +4,11 @@ import plotly.graph_objects as go
 from plotly.offline import plot
 from datetime import datetime
 
-import dash
-from dash import dcc, html
-from dash import dash_table
-
-
-
 
 def leer_CDP(fecha):
     nombre_archivo = f"Reporte Disconformidades PPagos I {fecha}.xlsx"
-    ruta_archivo = f"C:\\Users\\QV6522\\Workspace\\IngresosRegulados\\Proyectos\\BBDD\\{nombre_archivo}"
+    # ruta_archivo = f"C:\\Users\\QV6522\\Workspace\\IngresosRegulados\\Proyectos\\BBDD\\{nombre_archivo}"
+    ruta_archivo = f"C:\\workspace\\IngresosRegulados\\Proyectos\\BBDD\\{nombre_archivo}"
 
     nombre_hoja = "MCP"
     try:
@@ -107,41 +102,160 @@ def calcular_porcentaje_acumulado_deuda(df_empresas):
             return 'C'
 
     df_filtrado['Categoria'] = df_filtrado['Porcentaje Acumulado'].apply(asignar_categoria)
+    
     df_filtrado['Cantidad Disconformidades'] = df_empresas['Q_Deuda']
-    df_resultado = df_filtrado[['Categoria', 'RUT', 'RS', 'Deuda (M)', 'Cantidad Disconformidades', 'Porcentaje del Total (%)', 'Porcentaje Acumulado']]
-    df_resultado.columns = ['Categoria', 'RUT', 'Razon Social', 'Total Deuda (M)', 'Cantidad Disconformidades', 'Porcentaje del Total (%)', 'Porcentaje Acumulado (%)']
+    
+    df_resultado = df_filtrado[['Categoria', 'RUT', 'RS', 'Deuda (M)', 'Cantidad Disconformidades',
+                                'Porcentaje del Total (%)', 'Porcentaje Acumulado']]
+    
+    df_resultado.columns = ['Categoria', 'RUT', 'Razon Social', 'Total Deuda (M)', 'Cantidad Disconformidades',
+                            'Porcentaje del Total (%)', 'Porcentaje Acumulado (%)']
 
     return df_resultado
 
 
-# --------------------
+def crear_grafico_deuda(resultado_df):
+    suma_deuda_A = resultado_df[resultado_df['Categoria'] == 'A']['Total Deuda (M)'].sum()
+    suma_deuda_B = resultado_df[resultado_df['Categoria'] == 'B']['Total Deuda (M)'].sum()
+    suma_deuda_C = resultado_df[resultado_df['Categoria'] == 'C']['Total Deuda (M)'].sum()
 
-app = dash.Dash(__name__)
+    fig = go.Figure(data=[go.Bar(
+        x=['A', 'B', 'C'],
+        y=[suma_deuda_A, suma_deuda_B, suma_deuda_C],
+        marker_color='#01ACFB',
+        text=[f"{suma_deuda_A:,.1f}M", f"{suma_deuda_B:,.1f}M", f"{suma_deuda_C:,.1f}M"],
+        textposition='outside'
+    )])
 
+    fig.update_layout(
+        title_text='Deuda por Categoría (en millones)',
+        xaxis_title='Categoría',
+        yaxis_title='Total Deuda Sistema (M)',
+        template='plotly_white',
+        margin=dict(t=60)
+    )
+
+    return fig
+
+
+def crear_tabla_deuda(df_resultado):
+    if df_resultado.empty:
+        print("El DataFrame está vacío.")
+        return None
+
+    fig = go.Figure(data=[go.Table(
+        header=dict(values=list(df_resultado.columns),
+                    fill_color='#01ACFB',
+                    align='left'),
+        cells=dict(values=[df_resultado[col] for col in df_resultado.columns],
+                   fill_color='white',
+                   align='left'))
+    ])
+
+    fig.update_layout(
+        margin=dict(l=5, r=5, t=5, b=5)
+    )
+
+    return fig
+
+
+# ---------------------------------------------------------------------------------------------------------------------
 fecha = '202310'
+fecha_objeto = datetime.strptime(fecha, '%Y%m')
+periodo = fecha_objeto.strftime('%B de %Y')
 df_original = leer_CDP(fecha)
+# ---------------------------------------------------------------------------------------------------------------------
+
 if df_original is not None:
     df_transformado = transformaciones_cdp(df_original)
-    df_empresas = empresas(df_transformado)
-    df_resultado = calcular_porcentaje_acumulado_deuda(df_empresas)
+    empresas_df = empresas(df_transformado)
+    resultado_df = calcular_porcentaje_acumulado_deuda(empresas_df)
+
+    # Usando la función para crear el gráfico
+    fig = crear_grafico_deuda(resultado_df)
+    grafico_div = plot(fig, output_type='div', include_plotlyjs=True)
+
+    # Generar la tabla
+    fig_tabla = crear_tabla_deuda(resultado_df)
+    if fig_tabla is not None:
+        tabla_div = plot(fig_tabla, output_type='div', include_plotlyjs=True)
+    else:
+        tabla_div = "No se pudo generar la tabla."
+
+    titulo = "Transferencias económicas entre empresas"
+    subtitulo = "Cadena de pago – Incumplimientos de pago no acordado"
+
+    pie_de_pagina = """
+    <div class="pie-de-pagina">
+        <p>&copy; 2024 Engie. Gerencia de Negocios de Transmisión.</p>
+    </div>
+    """
+# ----------------------------------------------------------------------------------------------------------------------
+    html_contenido = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>{titulo}</title>
+        <link href="https://fonts.googleapis.com/css?family=Roboto:400,700&display=swap" rel="stylesheet">
+        <style>
+            body {{
+                font-family: 'Roboto', sans-serif;
+                margin-left: 2%;
+                margin-right: 2%;
+                background-color: #F5F5F5;
+                color: #034E7B;
+            }}
+            h1 {{
+                color: #034E7B; /* Azul Oscuro para el título principal */
+                margin-bottom: 0;
+            }}
+            h2 {{
+                color: #647A8E; /* Gris Azulado para el subtítulo */
+                margin-top: 5px;
+            }}
+            .contenido-flex {{
+                display: flex;
+                justify-content: space-around; /* Ajusta la distribución de los elementos */
+                align-items: flex-start; /* Alinea los elementos al inicio de su contenedor */
+                flex-wrap: wrap; /* Permite que los elementos se envuelvan si no caben en una sola línea */
+            }}
+            .plotly-graph-div, .plotly-table-div {{
+                margin-top: 20px;
+                flex: 1;
+                min-width: 48%; /* Controla el ancho mínimo de cada elemento */
+                margin-right: 0; /* Elimina el margen derecho para reducir el espacio */
+            }}
+            /* Elimina el margen adicional en los elementos finales */
+            .plotly-graph-div:last-child, .plotly-table-div:last-child {{
+                margin-right: 0;
+            }}
+            .pie-de-pagina {{
+                margin-top: 20px; /* Reduce el espacio antes del pie de página */
+                text-align: center;
+                color: #A8B07A; /* Verde Oliva Suave para el texto del pie de página */
+                font-size: 0.9em;
+            }}
+        </style>
+    </head>
+    <body>
+        <h1>{titulo}</h1>
+        <h2>{subtitulo}</h2>
+        <h3>{periodo}</h3>
+        <div class="contenido-flex">
+            <div>{grafico_div}</div> <!-- Contenedor para el gráfico de Plotly -->
+            <div>{tabla_div}</div> <!-- Contenedor para la tabla de Plotly -->
+        </div>
+        {pie_de_pagina} <!-- Aquí se agrega el pie de página -->
+    </body>
+    </html>
+    """
+# ---------------------------------------------------------------------------------------------------------------------
+    # Ajusta la ruta del archivo según tu entorno
+    nombre_archivo = r"C:\workspace\IngresosRegulados\Proyectos\informes\cadenadepagos\informe_cdp.html"
+
+    with open(nombre_archivo, 'w', encoding='utf-8') as archivo:
+        archivo.write(html_contenido)
+
+    print(f"El informe con gráfico dinámico ha sido guardado como {nombre_archivo}.")
 else:
     print("No se pudo cargar el DataFrame original.")
-    df_resultado = pd.DataFrame()
-
-app.layout = html.Div([
-    html.H1('Detalle de Deuda por Empresa'),
-    dash_table.DataTable(
-        id='tabla_deuda',
-        columns=[{"name": i, "id": i} for i in df_resultado.columns],
-        data=df_resultado.to_dict('records'),
-        style_table={'overflowX': 'scroll'},
-        page_size=10,
-        style_cell={'textAlign': 'left'},
-        filter_action="native",
-        sort_action="native",
-        sort_mode="multi",
-    )
-])
-
-if __name__ == '__main__':
-    app.run_server(debug=True)

@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+    <html>
+    <head>
+        <title>{titulo}</title>
+        <link href="https://fonts.googleapis.com/css?family=Roboto:400,700&display=swap" rel="stylesheet">
+        <style>
+            body {{
+                font-family: 'Roboto', sans-serif;
+                margin-left: 2%;
+                margin-right: 2%;
+                background-color: #F5F5F5;
+                color: #034E7B;
+            }}
+            h1 {{
+                color: #034E7B; /* Azul Oscuro para el título principal */
+                margin-bottom: 0;
+            }}
+            h2 {{
+                color: #647A8E; /* Gris Azulado para el subtítulo */
+                margin-top: 5px;
+            }}
+            .plotly-graph-div {{
+                margin-top: 20px;
+            }}
+            .pie-de-pagina {{
+                margin-top: 50px;
+                text-align: center;
+                color: #A8B07A; /* Verde Oliva Suave para el texto del pie de página */
+                font-size: 0.9em;
+            }}
+        </style>
+    </head>
+    <body>
+        <h1>{titulo}</h1>
+        <h2>{subtitulo}</h2>
+        <h3>{periodo}</h3>
+        {grafico_div} <!-- Aquí se incrusta el gráfico de Plotly -->
+        <div class="espacio-entre"></div> <!-- Espacio entre gráfico y tabla -->
+        {tabla_div} <!-- Aquí se incrusta la tabla de Plotly -->
+        {pie_de_pagina} <!-- Aquí se agrega el pie de página -->
+    </body>
+    </html>
+	
+	
+	    # ruta_archivo_zonal_y_dedicado = ("C:\\Users\\QV6522\\Workspace\\IngresosRegulados\\Proyectos\\BBDD\\Saldos "
+    #                            "Transmisión Zonal y Dedicado D7T 2311-def.xlsx")
+
+    # ruta_archivo_nacional = ("C:\\Users\\QV6522\\Workspace\\IngresosRegulados\\Proyectos\\BBDD\\Saldos Transmisión "
+    #                         "Nacional D7T 2311-def.xlsx")
+	
+	
+	def leer_datos_transmision_y_dedicado():
+    ruta_archivo_zonal_y_dedicado = (r"C:\workspace\IngresosRegulados\Proyectos\BBDD\Saldos Transmisión Zonal y Dedicado D7T 2311-def.xlsx")
+
+    ruta_archivo_nacional = (r"C:\workspace\IngresosRegulados\Proyectos\BBDD\Saldos Transmisión Nacional D7T 2311-def.xlsx")
+
+    # Leer Prorrata_Zonal
+    df_zonal = pd.read_excel(ruta_archivo_zonal_y_dedicado, sheet_name='Prorrata_Zonal', usecols='B:AA', skiprows=4)
+    df_zonal_filtrado = df_zonal[df_zonal['PROPIETARIO'] == 'ENGIE']
+    df_zonal_filtrado['MES'] = pd.to_datetime(df_zonal_filtrado['MES'])
+    df_zonal_filtrado = df_zonal_filtrado[df_zonal_filtrado['MES'] == '2023-11-01']
+    df_zonal_filtrado = df_zonal_filtrado.sort_values(by='MES', ascending=False)
+    df_zonal_filtrado = df_zonal_filtrado[['VATT [$]', 'ITE [$]', 'ITP [$]']]
+    df_zonal_filtrado['Sistema'] = 'zonal'
+
+    # Leer Prorrata_Dedicado
+    df_dedicado = pd.read_excel(ruta_archivo_zonal_y_dedicado, sheet_name='Prorrata_Dedicado', usecols='B:U',
+                                skiprows=5)
+    df_dedicado_filtrado = df_dedicado[df_dedicado['PROPIETARIO'] == 'ENGIE']
+    df_dedicado_filtrado['MES'] = pd.to_datetime(df_dedicado_filtrado['MES'])
+    df_dedicado_filtrado = df_dedicado_filtrado[df_dedicado_filtrado['MES'] == '2023-11-01']
+    df_dedicado_filtrado = df_dedicado_filtrado.sort_values(by='MES', ascending=False)
+    df_dedicado_filtrado = df_dedicado_filtrado[['VATT [$]', 'ITE [$]', 'ITP [$]']]
+    df_dedicado_filtrado['Sistema'] = 'dedicado'
+
+    # Leer Saldos 25T
+    df_25t = pd.read_excel(ruta_archivo_nacional, sheet_name='Saldos 25T', usecols='B:AL', skiprows=4)
+    df_25t_filtrado = df_25t[df_25t['PROPIETARIO'] == 'ETSA']
+    df_25t_filtrado['MES'] = pd.to_datetime(df_25t_filtrado['MES'])
+    df_25t_filtrado = df_25t_filtrado[df_25t_filtrado['MES'] == '2023-11-01']
+    df_25t_filtrado = df_25t_filtrado.sort_values(by='MES', ascending=False)
+    df_25t_filtrado = df_25t_filtrado[['VATT [$]', 'ITE [$]', 'ITP [$]']]
+    df_25t_filtrado['Sistema'] = '25T'
+
+    # Leer Saldos CU
+    df_cu = pd.read_excel(ruta_archivo_nacional, sheet_name='Saldos CU', usecols='B:S', skiprows=5)
+    df_cu_filtrado = df_cu[df_cu['PROPIETARIO'] == 'ETSA']
+    df_cu_filtrado['MES'] = pd.to_datetime(df_cu_filtrado['MES'])
+    df_cu_filtrado = df_cu_filtrado[df_cu_filtrado['MES'] == '2023-11-01']
+    df_cu_filtrado = df_cu_filtrado.sort_values(by='MES', ascending=False)
+    df_cu_filtrado = df_cu_filtrado[['VATT [$]', 'ITE [$]', 'ITP [$]']]
+    df_cu_filtrado['Sistema'] = 'CU'
+
+    # Concatenar todos los DataFrames filtrados
+    df_concatenado = pd.concat([df_zonal_filtrado, df_dedicado_filtrado, df_25t_filtrado, df_cu_filtrado],
+                               ignore_index=True)
+    cols = ['Sistema'] + [col for col in df_concatenado.columns if col != 'Sistema']
+    df_concatenado = df_concatenado[cols]
+
+    return df_concatenado
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	import numpy as np
+
+import numpy as np
+
+from selenium import webdriver
+from selenium.webdriver.support.ui import Select
+from selenium.webdriver.common.by import By
+from selenium.webdriver.edge.service import Service
+import pandas as pd
+import time
+
+
+def df_dolar(year):
+    url = "https://si3.bcentral.cl/indicadoressiete/secure/Serie.aspx?gcode=PRE_TCO&param=RABmAFYAWQB3AGYAaQBuAEkALQAzADUAbgBNAGgAaAAkADUAVwBQAC4AbQBYADAARwBOAGUAYwBjACMAQQBaAHAARgBhAGcAUABTAGUAdwA1ADQAMQA0AE0AawBLAF8AdQBDACQASABzAG0AXwA2AHQAawBvAFcAZwBKAEwAegBzAF8AbgBMAHIAYgBDAC4ARQA3AFUAVwB4AFIAWQBhAEEAOABkAHkAZwAxAEEARAA%3d"
+
+    driver_path = r"C:\workspace\IngresosRegulados\msedgedriver\msedgedriver.exe"
+    service = Service(executable_path=driver_path)
+    driver = webdriver.Edge(service=service)
+
+    try:
+        driver.get(url)
+        driver.maximize_window()
+
+        select_element = Select(driver.find_element(By.ID, "DrDwnFechas"))
+        select_element.select_by_value(str(year))
+
+        time.sleep(3)
+
+        table = driver.find_element(By.XPATH,
+                                    "/html/body/form/div[3]/div/div[6]/div/div/table/tbody/tr/td/div/div/table")
+
+        rows = table.find_elements(By.TAG_NAME, "tr")
+
+        data = []
+        for row in rows:
+            cells = row.find_elements(By.TAG_NAME, "td")
+            row_data = [cell.text for cell in cells]
+            data.append(row_data)
+
+        headers = ['Día'] + [f'01-{str(i).zfill(2)}-{year}' for i in range(1, 13)]
+
+        df = pd.DataFrame(data[1:], columns=headers)
+
+        for column in df.columns[1:]:
+            df[column] = df[column].apply(lambda x: x.replace(',', '.').strip() if isinstance(x,
+                                                                                              str) else x)
+            df[column] = pd.to_numeric(df[column],
+                                       errors='coerce')
+
+        print(df)
+
+    except Exception as e:
+        print("Se produjo un error: ", e)
+    finally:
+        driver.quit()
+
+
+# Ejemplo de uso
+df_dolar(2023)
+
+
+
+
+def dolar(year):
+    url = f"https://www.sii.cl/valores_y_fechas/dolar/dolar{year}.htm"
+
+    # driver_path = r'C:/Users/QV6522/Workspace/IngresosRegulados/msedgedriver/msedgedriver.exe'
+    driver_path = r"C:\workspace\IngresosRegulados\msedgedriver\msedgedriver.exe"
+    service = Service(executable_path=driver_path)
+    driver = webdriver.Edge(service=service)
+
+    try:
+        driver.get(url)
+        WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//button[@data-id='sel_mes']"))).click()
+        WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, "//span[contains(text(),'Todos los meses')]"))).click()
+        WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.ID, "table_export")))
+        WebDriverWait(driver, 20).until(
+            lambda d: len(d.find_element(By.ID, "table_export").find_elements(By.TAG_NAME, "tr")) > 1
+        )
+
+        table = driver.find_element(By.ID, "table_export")
+        rows = table.find_elements(By.TAG_NAME, "tr")
+        table_data = [[cell.text for cell in row.find_elements(By.TAG_NAME, "td")] for row in rows[1:]]
+    except TimeoutException as e:
+        print("Se produjo un error al cargar la página o al interactuar con los elementos de la página: ", e)
+        return None
+    finally:
+        driver.quit()
+
+    df = pd.DataFrame(table_data)
+    df_promedio = df.tail(1)
+    df_promedio_transpuesto = df_promedio.T
+    df_promedio_transpuesto.columns = ['Dólar']
+    df_promedio_transpuesto.reset_index(inplace=True, drop=True)
+    fechas = pd.date_range(start=str(year) + '-01-01', periods=len(df_promedio_transpuesto), freq='MS')
+    df_promedio_transpuesto['Periodo'] = fechas
+    df_dólar = df_promedio_transpuesto[['Periodo', 'Dólar']].copy()
+    df_dólar['Dólar'] = pd.to_numeric(df_dólar['Dólar'].str.replace(',', ''), errors='coerce')
+    df_dólar['Dólar'] = pd.to_numeric(df_dólar['Dólar'], errors='coerce') / 100
+
+    return df_dólar
+	
+	
+	
+	
+	df_itd_preparado = itd()
+fecha_interes = '202311'
+
+
+df_vatt_calculado, df_agrupado_por_sistema = vatt(df_itd_preparado, fecha_interes)
+
+
+# Imprimir en pantalla el DataFrame resultante de los cálculos de VATT.
+print("DataFrame Resultante de VATT Calculado:")
+print(df_vatt_calculado)
+
+# Imprimir en pantalla el DataFrame agrupado por 'Sistema' con la suma de 'VATT CLP'.
+print("\nDataFrame Agrupado por Sistema con Suma de VATT CLP:")
+print(df_agrupado_por_sistema)
+
+
+
+
+
+
+
+def agregar_datos_nacionales(df):
+    df_zonal_dedicado = df[df['Sistema'].isin(['Zonal', 'Dedicado'])]
+    df_nacional = df[df['Sistema'].isin(['25T', 'CU'])]
+    suma_nacional = df_nacional[['VATT [$]', 'ITE [$]', 'ITP [$]']].sum().to_frame().T
+    suma_nacional['Sistema'] = 'Nacional'
+    suma_nacional = suma_nacional[df.columns.tolist()]
+    df_final = pd.concat([df_zonal_dedicado, suma_nacional], ignore_index=True)
+    df_final = df_final.sort_values(by='VATT [$]', ascending=False)
+
+    return df_final
+	
+	
+	
+	
+	
+df_itd_preparado = itd()
+fecha = '202311'
+
+# Llamada a la función vatt
+df_vatt = vatt(df_itd_preparado, fecha)
+
+# Llamada a la función vatt_calc con el DataFrame resultante de vatt
+df_vatt_agg = vatt_calc(df_vatt)
+
+print("DataFrame VATT Calculado:")
+print(df_vatt)
+
+# Llamada a la función vatt_calc con el DataFrame resultante de vatt
+df_vatt_agg = vatt_calc(df_vatt)
+
+# Imprimir el DataFrame resultante de vatt_agg
+print("\nDataFrame VATT Agrupado por Sistema:")
+print(df_vatt_agg)
+
+
