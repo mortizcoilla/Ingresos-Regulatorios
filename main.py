@@ -1,9 +1,9 @@
 # Main
 # Importaciones desde subdirectorios
-from Peajes.procesamiento_datos.procesador import extract_dataframes, create_dataframe, procesar_datos_historicos, unir_dataframes
-from Peajes.utilidades.estadisticas import calcular_estadisticas
-from Peajes.utilidades.email_sender import evaluar_pago_total, seleccionar_y_enviar_email
-from Peajes.web_scraping.scraper import open_website
+from procesamiento_datos import extract_dataframes, create_dataframe, procesar_datos_historicos, unir_dataframes
+from utilidades.estadisticas import calcular_estadisticas
+from utilidades.email_sender import evaluar_pago_total, seleccionar_y_enviar_email
+from web_scraping.scraper import open_website
 
 # Importar configuraciones
 from Peajes.utilidades.config import (
