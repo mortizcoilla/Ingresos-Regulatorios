@@ -4,6 +4,26 @@ import warnings
 warnings.filterwarnings("ignore", message="Slicer List extension is not supported and will be removed")
 
 
+def generar_rutas(fecha_entrada):
+    anio = fecha_entrada[:4]
+    mes = fecha_entrada[4:]
+
+    ruta_archivo_indices = (f"C:\\Users\\QV6522\\Workspace\\IngresosRegulados\\Proyectos\\indices_macroeconomicos"
+                            f"\\indices_macroeconomicos_{anio}.xlsx")
+
+    ruta_archivo_nacional = ("C:\\Users\\QV6522\\workspace\\BBDD\\02_Cargos Unicos\\Preliminares\\{"
+                             "}-Preliminar\\Saldos Transmisión Nacional D7T {}-pre.xlsx").format(
+        anio + mes, anio + mes)
+
+    ruta_archivo_zonal_y_dedicado = ("C:\\Users\\QV6522\\Workspace\\IngresosRegulados\\Proyectos\\BBDD\\Saldos "
+                                     "Transmisión Zonal y Dedicado D7T {}-pre.xlsx").format(
+        anio + mes)
+
+    return (ruta_archivo_indices,
+            ruta_archivo_nacional,
+            ruta_archivo_zonal_y_dedicado)
+
+
 def k_index(fecha_entrada):
     fecha_formato_completo = f"{fecha_entrada}01"
     fecha_datetime = pd.to_datetime(fecha_formato_completo, format='%Y%m%d')
@@ -78,7 +98,6 @@ def vatt(df_itd, fecha):
                     (1 + Ta_k) / (1 + Ta_0))) * ((t_k / t_0) * ((1 - t_0) / (1 - t_k)))
     df_vatt['VATT USD'] = df_vatt['AVI USD'] + df_vatt['COMA USD'] + df_vatt['AEIR USD']
 
-    # Convertir a CLP
     df_vatt['AVI CLP'] = df_vatt['AVI USD'] * D_k
     df_vatt['COMA CLP'] = df_vatt['COMA USD'] * D_k
     df_vatt['AEIR CLP'] = df_vatt['AEIR USD'] * D_k
@@ -125,6 +144,7 @@ def calcular_vatt_por_tramo(df_itd_amp, fecha):
 
         avi_usd = 0
         coma_usd = 0
+
         if row['NombreTramo'] in categoria_1:
             avi_usd = row['AVI US$'] * indexador_cat1
             coma_usd = row['COMA US$'] * indexador_cat1
